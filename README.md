@@ -76,7 +76,45 @@ You should receive a JSON response indicating that Qdrant is up and running.
 
 ---
 
+## 🦙 Ollama Installation and Model Setup
+
+### 📦 Step 1: Install Ollama
+Download and install [Ollama](https://ollama.com/download) for your operating system
+
+---
+
+### ✅ Step 2: Verify Installation
+After installation, open your terminal (or command prompt) and run:
+```bash
+ollama --version
+```
+If installed correctly, this will display the current Ollama version.
+
+---
+
+### 🤖 Step 3: Download the Model
+Use Ollama to pull the `llama3-chatqa` model to your local system:
+```bash
+ollama pull llama3-chatqa:latest
+```
+
+---
+
+### 🚀 Step 4: Run the Model
+Start the model with:
+```bash
+ollama run llama3-chatqa:latest
+```
+You can now interact with the model directly in your terminal.
+
+---
+
+## ✅ Llama Model Is Ready!
+
+---
+
 ## 🔗 Additional Resources
 
 - 📄 [Qdrant Docs](https://qdrant.tech/documentation/quickstart/)
+- 🤖 [Ollama Model Docs](https://ollama.com/library/llama3-chatqa)
 
