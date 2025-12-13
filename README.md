@@ -104,6 +104,7 @@ ollama pull llama3-chatqa:latest
 Start the model with:
 ```bash
 ollama run llama3-chatqa:latest
+ollama serve
 ```
 You can now interact with the model directly in your terminal.
 
@@ -111,7 +112,28 @@ You can now interact with the model directly in your terminal.
 
 ## ✅ Llama Model Is Ready!
 
----
+
+## Create and Activate Virtual Environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+## Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+## Start backend server
+```bash
+uvicorn backend.service:app --reload --host 0.0.0.0 --port 8000
+```
+
+## Start Tkinter app
+
+```bash
+python3 main.py
+```
 
 ## 🔗 Additional Resources
 

@@ -207,3 +207,8 @@ marimo/_lsp/
 __marimo__/
 
 /qdrant
+/dataset
+/model_artifacts
+note.txt
+.vscode
+*.zip

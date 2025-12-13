@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+qdrant-client
+sentence-transformers
+torch
+numpy
+requests
+PyPDF2
+pydantic
+pandas
+matplotlib
