@@ -198,9 +198,18 @@ class RetrievalAndGenerationService:
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
         }
-        resp = requests.post(OLLAMA_URL, json=payload, timeout=300)
-        resp.raise_for_status()
-        data = resp.json()
+        fail = 0
+        while fail != 3:
+            try:
+                resp = requests.post(OLLAMA_URL, json=payload, timeout=600)
+                break
+            except:
+                fail += 1
+        try:
+            resp.raise_for_status()
+            data = resp.json()
+        except:
+            data = {}
         msg = data.get("message", {})
         answer = msg.get("content", "").strip()
         return answer

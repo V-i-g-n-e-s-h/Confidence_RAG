@@ -1,5 +1,7 @@
 import os
 import json
+from typing import (List, Optional, Literal,)
+
 import torch
 import torch.nn as nn
 from sentence_transformers import SentenceTransformer
@@ -30,7 +32,10 @@ class ConfHead(nn.Module):
 
 
 class ConfidenceScorerService:
-    def __init__(self, model_dir: str = MODEL_DIR):
+    def __init__(
+        self, 
+        model_dir: str = MODEL_DIR
+    ):
         cfg_path = os.path.join(model_dir, "config.txt")
         if not os.path.exists(cfg_path):
             raise FileNotFoundError(
