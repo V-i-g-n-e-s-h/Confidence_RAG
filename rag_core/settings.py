@@ -17,6 +17,7 @@ QDRANT_TOP_K = 5
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3-chatqa")
+os.environ["CONF_SCORER_BACKEND"] = "hf"
 
 CONTEXT_MAX_CHARS = 4000
 

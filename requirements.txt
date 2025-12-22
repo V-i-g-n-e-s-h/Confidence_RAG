@@ -9,3 +9,8 @@ PyPDF2
 pydantic
 pandas
 matplotlib
+openai
+requests
+transformers 
+accelerate 
+safetensors
