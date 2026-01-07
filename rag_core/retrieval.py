@@ -111,6 +111,7 @@ class RetrievalAndGenerationService:
         collections = self.qdrant.get_collections().collections
         names = [c.name for c in collections]
         if QDRANT_COLLECTION not in names:
+            dim = 384
             self.qdrant.recreate_collection(
                 collection_name=QDRANT_COLLECTION,
                 vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
@@ -175,7 +176,7 @@ class RetrievalAndGenerationService:
 
         prompt = (
             "You are a question answering assistant in a confidence-aware RAG system.\n"
-            "You receive evidence passages with calibrated confidence scores in [0,1].\n"
+            "You receive evidence passages with calibrated confidence scores between 0.00 to 1.00.\n"
             "Follow these rules:\n"
             " - Rely primarily on HIGH confidence evidence.\n"
             " - Use MEDIUM confidence evidence cautiously.\n"
@@ -186,6 +187,48 @@ class RetrievalAndGenerationService:
 
         if overall_conf is not None:
             prompt += f"Overall system confidence estimate: {overall_conf:.2f}\n\n"
+
+        prompt += (
+            f"Question:\n{question}\n\n"
+            f"Evidence:\n{context}\n\n"
+            "Now provide a clear and concise answer, explicitly reflecting uncertainty when appropriate:"
+        )
+
+        payload = {
+            "model": OLLAMA_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+        fail = 0
+        while fail != 3:
+            try:
+                resp = requests.post(OLLAMA_URL, json=payload, timeout=600)
+                break
+            except:
+                fail += 1
+        try:
+            resp.raise_for_status()
+            data = resp.json()
+        except:
+            data = {}
+        msg = data.get("message", {})
+        answer = msg.get("content", "").strip()
+        return answer
+
+    def generate_answer_no_conf(self, question: str, passages: List[Dict[str, Any]]):
+        context, count = "", 1
+        for p in passages:
+            txt = p.get("text") or ""
+            context += f"\n passage{count}:\n{txt}\n"
+
+
+        prompt = (
+            "You are a question answering assistant in a RAG system.\n"
+            "You receive passages to answer the question.\n"
+            "Follow these rules:\n"
+            " - If nothing clearly supports an answer, say you don't know.\n"
+            " - IF THE ANSWER NOT AVAILABLE IN THE PROVIDED ANSWER SAY YOU DON'T KNOW.\n\n"
+        )
 
         prompt += (
             f"Question:\n{question}\n\n"
@@ -248,7 +291,7 @@ class RetrievalAndGenerationService:
             else:
                 r["conf_bucket"] = "low"
 
-        overall_conf = max(r["confidence"] for r in filtered)
+        overall_conf = sum(r["confidence"] for r in filtered) / len(filtered)
         
         answer = self.generate_answer(question, filtered, overall_conf)
 
@@ -258,6 +301,21 @@ class RetrievalAndGenerationService:
             "passages": filtered,
         }
 
+    def answer_with_no_confidence(self, question: str):
+        retrieved = self.retrieve(question)
+        passages = [r["text"] for r in retrieved]
+        if not passages:
+            return {
+                "answer": "I could not retrieve any relevant context for this question.",
+                "passages": [],
+            }
+        
+        answer = self.generate_answer_no_conf(question, retrieved)
+
+        return {
+            "answer": answer,
+            "passages": retrieved,
+        }
 
     def index_document(self, filepath: str):
         """Read file, chunk, embed, and upsert into Qdrant."""

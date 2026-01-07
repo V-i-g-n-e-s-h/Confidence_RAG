@@ -1,5 +1,6 @@
 import os
 import json
+import random
 from typing import List, Optional, Literal
 
 import requests
@@ -45,7 +46,7 @@ class ConfidenceScorerService:
         ollama_model: str = None,
         ollama_base_url: str = None,
         hf_model_id: str = None,
-        llm_timeout_s: float = 30.0,
+        llm_timeout_s: float = 300.0,
         llm_max_chars_per_passage: int = 1800,
     ):
         self.model_dir = model_dir
@@ -206,7 +207,7 @@ class ConfidenceScorerService:
             self._hf_tokenizer = AutoTokenizer.from_pretrained(self.hf_model_id, use_fast=True)
             self._hf_model = AutoModelForCausalLM.from_pretrained(
                 self.hf_model_id,
-                torch_dtype="auto",
+                dtype="auto",
                 device_map="auto",   # GPU if available, else CPU
             )
             self._hf_model.eval()
@@ -221,33 +222,41 @@ class ConfidenceScorerService:
         # Single call returning a JSON array of floats (0..1), same order as passages.
         parts = [
             "You are a strict relevance scorer for RAG.",
-            "Given a Question and a list of Passages, output ONLY valid JSON: an array of numbers in [0, 1].",
+            "Given a Question and a list of Passages, output ONLY valid JSON: an array of floating numbers between 0.0 to 1.0.",
             "The i-th number is how relevant Passage i is to answering the Question.",
-            "Use 0.0 for totally irrelevant, 1.0 for directly answering.",
-            "",
+            # "Use 0.0 for totally irrelevant, 0.5 for partially relavant, 1.0 for directly answering.",
+            "Use float number from 0.0 to 1.0 indicating how relevant the Passage is to the question.",
+            "0.0 = not relevant at all, 1.0 = perfectly relevant.",
+            f"You will be provided with {len(passages)} passages. You need to find the relavance score all {len(passages)} passages."
+            "\n",
             f"Question: {question.strip()}",
-            "",
+            "\n",
             "Passages:",
         ]
-        for i, p in enumerate(passages):
-            parts.append(f"[{i}] {self._truncate(p)}")
-        parts.append("")
-        parts.append("Return JSON array only. Example: [0.1, 0.0, 0.85, 0.65, 0.43]")
+        for i, p in enumerate(passages, 1):
+            parts.append(f"\n[{i}] {self._truncate(p)}\n")
+        parts.append("\n")
+        parts.append(
+            "Return JSON array only with those floating numbers and the arrays key should be 'result'." 
+            # " Example: [0.1, 0.0, 0.85, 0.65, 0.43]"
+        )
         return "\n".join(parts)
 
     def _parse_json_array(self, text: str, n: int) -> List[float]:
-        text = (text or "").strip()
+        if isinstance(text, str):
+            text = (text or "").strip()
 
-        # Fast path
-        try:
-            arr = json.loads(text)
-        except json.JSONDecodeError:
-            # Try to extract the first [...] block
-            start = text.find("[")
-            end = text.rfind("]")
-            if start == -1 or end == -1 or end <= start:
-                raise ValueError(f"LLM did not return JSON array. Got: {text[:200]}")
-            arr = json.loads(text[start:end + 1])
+            # Fast path
+            try:
+                arr = json.loads(text)
+            except json.JSONDecodeError:
+                # Try to extract the first [...] block
+                start = text.find("[")
+                end = text.rfind("]")
+                if start == -1 or end == -1 or end <= start:
+                    raise ValueError(f"LLM did not return JSON array. Got: {text[:200]}")
+                arr = json.loads(text[start:end + 1])
+        else: arr = text
 
         if not isinstance(arr, list) or len(arr) != n:
             raise ValueError(f"LLM JSON must be a list of length {n}, got {type(arr)} len={getattr(arr,'__len__',None)}")
@@ -259,6 +268,7 @@ class ConfidenceScorerService:
             except Exception:
                 fx = 0.0
             # clamp
+            fx += round(random.uniform(0.0100, 0.0999), 5)
             if fx < 0.0:
                 fx = 0.0
             if fx > 1.0:
@@ -288,7 +298,8 @@ class ConfidenceScorerService:
             url,
             json={
                 "model": self.ollama_model,
-                "prompt": prompt,
+                # "prompt": prompt,
+                "messages": [{"role": "user", "content": prompt}],
                 "format": "json",
                 "stream": False,
             },
@@ -298,7 +309,7 @@ class ConfidenceScorerService:
         data = r.json()
 
         # Ollama typically returns the generated content in "response"
-        text = data.get("response", "")
+        text = json.loads(data.get("message", "").get("content", "")).get("result", "")
         return self._parse_json_array(text, n=len(passages))
     
     def _score_many_hf(self, question: str, passages) -> List[float]:

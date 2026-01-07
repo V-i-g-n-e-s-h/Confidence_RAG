@@ -44,7 +44,7 @@ class RagConfidenceDocApp(tk.Tk):
         q_frame = ttk.Frame(container)
         q_frame.pack(fill=tk.X, pady=(0, 8))
         ttk.Label(q_frame, text="Question", style="Header.TLabel").pack(anchor="w")
-        self.q_text = tk.Text(q_frame, height=3, wrap=tk.WORD, font=("Segoe UI", 11))
+        self.q_text = tk.Text(q_frame, height=3, wrap=tk.WORD, font=("Segoe UI", 9))
         self.q_text.pack(fill=tk.X)
 
         btn_frame = ttk.Frame(container)
@@ -61,7 +61,7 @@ class RagConfidenceDocApp(tk.Tk):
         left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Label(left, text="Answer", style="Header.TLabel").pack(anchor="w")
         self.answer_text = tk.Text(
-            left, height=9, wrap=tk.WORD, font=("Segoe UI", 11)
+            left, height=9, wrap=tk.WORD, font=("Segoe UI", 9)
         )
         self.answer_text.pack(fill=tk.BOTH, expand=True)
 
